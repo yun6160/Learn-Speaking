@@ -1,9 +1,13 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import random
+from io import BytesIO
+import uuid
+
+# --- core 폴더의 함수들 임포트 ---
 from core.data_loader import load_data_from_jsonbin
-from core.tts import autoplay_audio # 이 함수를 사용할 거임
-from core.stt import recognize_speech_from_mic
+from core.tts import autoplay_audio
+from core.stt import process_audio_for_stt
 from core.checker import compare_answers, get_highlighted_diff_html
 
 # --- 1. 설정 및 세션 상태 초기화 ---
@@ -14,34 +18,40 @@ st.set_page_config(
 )
 
 def reset_state_for_new_sentence():
+    """새로운 문장이 선택될 때마다 관련 세션 상태를 초기화하는 함수"""
     st.session_state.user_answer = ""
     st.session_state.check_result = None
-    st.session_state.show_all_correct_options = False # '모든 답안 보기'를 눌렀을 때 모든 정답을 보여줄지 여부
-    st.session_state.auto_play_audio_html = None # 새로운 문장 로드 시 자동 재생될 오디오 HTML 초기화
+    st.session_state.show_all_correct_options = False
+    st.session_state.auto_play_audio_html = None
+    
+    # --- ★★★★★ 핵심 수정 사항 1: 오디오 위젯의 키를 변경하여 초기화 ★★★★★ ---
+    # 새로운 고유 키를 생성하여 audio_input 위젯이 리셋되도록 함
+    st.session_state.audio_key = str(uuid.uuid4())
+
 
 def set_new_random_sentence():
+    """현재 선택된 레벨에서 랜덤한 새 문장을 설정하는 함수"""
     level = st.session_state.selected_level
     sentences = st.session_state.sentences
     possible_indices = [i for i, s in enumerate(sentences) if s.get('level') == level]
     if not possible_indices:
         st.session_state.current_index = -1; return
+    
     current_idx = st.session_state.get('current_index', -1)
     new_idx = random.choice(possible_indices)
     if len(possible_indices) > 1 and current_idx in possible_indices:
         while new_idx == current_idx: new_idx = random.choice(possible_indices)
-    st.session_state.current_index = new_idx
-    reset_state_for_new_sentence() # 상태 초기화 후 오디오 HTML 생성
     
-    # --- 새로운 문장이 설정될 때 TTS 자동 재생 HTML 생성 및 저장 ---
+    st.session_state.current_index = new_idx
+    reset_state_for_new_sentence()
+
     if st.session_state.current_index != -1:
         korean_text_to_play = st.session_state.sentences[st.session_state.current_index]["korean"]
         audio_html = autoplay_audio(korean_text_to_play)
         if audio_html:
-            st.session_state.auto_play_audio_html = audio_html # HTML을 세션 상태에 저장하여 다음 렌더링 시 재생되도록 함
-    else:
-        st.session_state.auto_play_audio_html = None
+            st.session_state.auto_play_audio_html = audio_html
 
-
+# --- 세션 상태 변수들 초기화 ---
 if 'sentences' not in st.session_state:
     st.session_state.sentences = load_data_from_jsonbin()
 if 'selected_level' not in st.session_state:
@@ -52,15 +62,14 @@ if 'user_answer' not in st.session_state:
     st.session_state.user_answer = ""
 if 'check_result' not in st.session_state:
     st.session_state.check_result = None
-if 'show_all_correct_options' not in st.session_state: # 모든 정답 옵션 보기 토글
+if 'show_all_correct_options' not in st.session_state:
     st.session_state.show_all_correct_options = False
-if 'auto_play_audio_html' not in st.session_state: # 자동 재생 오디오 HTML 저장용 세션 상태 추가
+if 'auto_play_audio_html' not in st.session_state:
     st.session_state.auto_play_audio_html = None
+if 'audio_key' not in st.session_state:
+    st.session_state.audio_key = 'initial_key' # 초기 키 설정
 
-
-# --- 2. UI 렌더링 ---
-
-# CSS를 주입하여 UI를 더 컴팩트하게 만듭니다.
+    # CSS를 주입하여 UI를 더 컴팩트하게 만듭니다.
 st.markdown("""
     <style>
         /* Streamlit 앱의 메인 콘텐츠 컨테이너 패딩 및 최대 너비 조절 */
@@ -140,13 +149,12 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-
+# --- 2. UI 렌더링 ---
 st.header("Learn-Speaking 🗣️")
 st.write("레벨을 선택하고, 한국어 문장을 듣고 영어로 말하는 연습을 해보세요.")
-st.write("🙏 첫 실행 시, 다시 듣기를 눌러야 음성이 나옵니다. 다른 랜덤 문장 버튼을 누르면 자동 재생됩니다.")
 st.divider()
 
-# 레벨 선택 버튼
+# 레벨 선택 UI
 st.write("##### **레벨 선택**")
 levels = sorted(list(set(s['level'] for s in st.session_state.sentences if 'level' in s)))
 if not levels:
@@ -158,47 +166,64 @@ else:
             if st.session_state.selected_level != level:
                 st.session_state.selected_level = level
                 set_new_random_sentence()
-                st.rerun()
+                st.rerun() 
 
 st.divider()
 
 if st.session_state.current_index == -1:
-    st.warning(f"레벨 {st.session_state.selected_level}에 해당하는 문장이 없습니다. sentences.json 파일을 확인해주세요.")
+    st.warning(f"레벨 {st.session_state.selected_level}에 해당하는 문장이 없습니다.")
 elif st.session_state.sentences:
     current_sentence_data = st.session_state.sentences[st.session_state.current_index]
     sentence_id = current_sentence_data["id"]
     korean_sentence = current_sentence_data["korean"]
-    correct_answers = current_sentence_data["english"] # 이건 모든 정답 옵션들
+    correct_answers = current_sentence_data["english"]
 
     st.markdown(f"**문장 ID: {sentence_id}** (레벨 {st.session_state.selected_level})")
 
     with st.container(border=True):
         st.markdown(f"#### 🇰🇷 {korean_sentence}")
     
-    # --- 자동 재생 오디오 삽입 (새로운 문장이 로드될 때마다) ---
-    # 세션 상태에 오디오 HTML이 있으면 삽입하고 바로 초기화하여 한 번만 재생되도록 함
     if st.session_state.auto_play_audio_html:
         components.html(st.session_state.auto_play_audio_html, height=0, scrolling=False)
-        st.session_state.auto_play_audio_html = None # 재생 후 HTML 초기화하여 다음 렌더링 시 다시 재생되지 않도록 함
+        st.session_state.auto_play_audio_html = None
 
-    # --- 기존 "🎧 듣기" 버튼은 이제 수동 재청취 기능으로 변경 ---
-    if st.button("🎧 다시 듣기", use_container_width=True): # 버튼 이름 변경
-        audio_html = autoplay_audio(korean_sentence) # autoplay 속성 때문에 이 함수 호출 시 바로 재생됨
+    if st.button("🎧 다시 듣기", use_container_width=True):
+        audio_html = autoplay_audio(korean_sentence)
         if audio_html:
             components.html(audio_html, height=0)
 
+    st.divider()
+    
+    st.markdown("##### 🎤 말하기 (마이크 아이콘을 누르고 말한 뒤, 정지 버튼을 누르세요)")
+    
+    audio_uploader = st.audio_input(
+        "여기에 녹음하세요:", 
+        key=st.session_state.audio_key # 세션 상태에 저장된 키를 사용
+    )
 
-    if st.button("🎤 말하기", use_container_width=True):
-        recognized_text = recognize_speech_from_mic() # core/stt.py 파일의 recognize_speech_from_mic 함수 사용
-        if recognized_text:
-            st.session_state.user_answer = recognized_text
-            st.session_state.check_result = compare_answers(recognized_text, correct_answers) # core/checker.py 사용
-            st.session_state.show_all_correct_options = False # 말하기 버튼 누르면 '모든 답안 보기' 상태 초기화
-        else:
-            st.session_state.user_answer = ""
-            st.session_state.check_result = None
-            st.session_state.show_all_correct_options = False
-        st.rerun()
+    # 오디오 데이터가 업로드되면 (녹음이 끝나면)
+    if audio_uploader:
+        # 이전에 분석한 결과가 있다면, 다시 분석하지 않도록 함
+        if st.session_state.user_answer == "":
+            st.info("음성 분석 중...")
+            
+            # --- ★★★★★ 핵심 수정 사항 ★★★★★ ---
+            # UploadedFile 객체에서 .getvalue()를 호출하여 실제 오디오 바이트 데이터를 추출합니다.
+            audio_bytes_data = audio_uploader.getvalue()
+            
+            # STT 처리 함수 호출
+            recognized_text = process_audio_for_stt(audio_bytes_data)
+
+            if recognized_text and "Error" not in recognized_text:
+                st.session_state.user_answer = recognized_text
+                st.session_state.check_result = compare_answers(recognized_text, correct_answers)
+            else:
+                st.warning("음성을 인식하지 못했거나 처리 중 오류가 발생했습니다.")
+                st.session_state.user_answer = "" 
+                st.session_state.check_result = None
+            
+            # 결과 처리가 끝나면 새로고침하여 결과를 표시
+            st.rerun()
 
     # --- 사용자 답변 및 피드백 표시 ---
     if st.session_state.user_answer:
@@ -209,33 +234,22 @@ elif st.session_state.sentences:
         if st.session_state.check_result:
             similarity, best_match = st.session_state.check_result
             similarity_percentage = similarity * 100
-
             st.markdown(f"> **유사도: {similarity_percentage:.1f}%**")
-
-            # 점수에 따른 메시지만 표시
-            if similarity_percentage >= 90:
-                st.success("🎉 거의 완벽해요!")
-            elif similarity_percentage >= 85:
+            if similarity_percentage >= 90: st.success("🎉 거의 완벽해요!")
+            elif similarity_percentage >= 80:
                 st.info("👍 아쉽네요! 그래도 계속 도전해보세요.")
-                
-            # --- 80% 이상일 때만 '틀린 부분 밑줄' 보여주기 (여기서 80%로 기준 변경됨) ---
-            if similarity_percentage >= 80: # 기존 85%에서 80%로 기준 변경 (이전 대화에서 변경된 것으로 보임)
                 st.markdown("##### ✏️ Corrected Answer")
                 highlighted_answer = get_highlighted_diff_html(st.session_state.user_answer, best_match)
                 st.markdown(f"<div>{highlighted_answer}</div>", unsafe_allow_html=True)
             else:
-                # 80% 미만이면 밑줄 친 답안도 안 보여줌
                 st.warning("🤔 조금 아쉬워요. 다시 한번 도전해보세요!")
 
-
-     # --- '모든 답안 보기' 토글 버튼 및 모든 정답 목록 표시 ---
-    # 사용자 답변 유무와 관계없이 항상 버튼이 보이도록 조건 제거
+    # --- '모든 답안 보기' 및 '다른 문장' 버튼 ---
     button_text = "🙈 답안 숨기기" if st.session_state.show_all_correct_options else "📝 모든 답안 보기"
     if st.button(button_text, key="toggle_all_answers", use_container_width=True):
         st.session_state.show_all_correct_options = not st.session_state.show_all_correct_options
         st.rerun()
 
-    # '모든 답안 보기' 상태가 True이면 정답 목록을 표시
     if st.session_state.show_all_correct_options:
         st.markdown("##### 📝 All Correct Answer(s) ")
         answer_html = "".join([f"<li>{ans}</li>" for ans in correct_answers])
