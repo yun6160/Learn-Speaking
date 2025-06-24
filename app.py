@@ -76,7 +76,7 @@ if 'audio_key' not in st.session_state:
 st.markdown("""
     <style>
         /* Streamlit 앱의 메인 콘텐츠 컨테이너 패딩 및 최대 너비 조절 */
-        .main .block-container {
+        .stMainBlockContainer {
             width: 100%;
             padding-top: 1rem;
             padding-bottom: 5rem;
@@ -106,6 +106,10 @@ st.markdown("""
             margin-top: 0.5rem !important;
             margin-bottom: 0.5rem !important;
         }
+        /* 모든 Streamlit 위젯 컨테이너의 상하 여백 줄이기 */
+        .stBlock {
+            margin-bottom: 10px !important; /* 기본 위젯 블록 간 간격 */
+        }
         /* st.info, st.success, st.warning 등 알림 위젯의 간격 조정 */
         .stAlert {
             padding-top: 5px;
@@ -113,12 +117,38 @@ st.markdown("""
             margin-top: 5px !important;
             margin-bottom: 5px !important;
         }
-        /* 모든 h1-h6 태그의 마진 및 패딩 조정 */
-        h1, h2, h3, h4, h5, h6 {
+        /* st.container 안의 여백을 줄임 */
+        .stContainer {
+            padding-top: 10px !important;
+            padding-bottom: 10px !important;
+            margin-bottom: 5px !important;
+        }
+
+        .stMarkdown div[data-testid^="stMarkdownContainer"] div {
+            margin-bottom: 10px !important; /* 충분히 넓은 간격 (조절 가능) */
+        }
+            
+        h5 {
+            margin-top: 5px !important;    /* h5 위쪽 여백 */
+            margin-bottom: 5px !important; /* h5 아래쪽 여백을 5px로 줄임 */
+            padding-top: 0px !important;   /* h5 내부 상단 패딩 제거 */
+            padding-bottom: 0px !important; /* h5 내부 하단 패딩 제거 */
+            padding-left: 0px !important;  /* h5 내부 좌측 패딩 제거 */
+            padding-right: 0px !important; /* h5 내부 우측 패딩 제거 */
+        }
+
+        /* (나머지 기존 CSS 코드들...) */
+        /* 이전에 h1-h6를 한꺼번에 묶어뒀던 부분도 h5에 대한 설정이 더 구체적이면 오버라이드될 것임 */
+        /* .stMarkdown h1, .stMarkdown h2, .stMarkdown h3,
+        .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
             margin-top: 10px !important;
             margin-bottom: 5px !important;
-            padding: 0 !important;
-        }
+            padding-top: 0px !important;
+            padding-bottom: 0px !important;
+            padding-left: 0px !important;
+            padding-right: 0px !important;
+        } */
+
     </style>
     """, unsafe_allow_html=True)
 
