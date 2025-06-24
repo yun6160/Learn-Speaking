@@ -2,7 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import random
 from io import BytesIO
-import uuid
+import uuid # 위젯 키를 위한 고유 ID 생성
 
 # --- core 폴더의 함수들 임포트 ---
 from core.data_loader import load_data_from_jsonbin
@@ -23,9 +23,9 @@ def reset_state_for_new_sentence():
     st.session_state.check_result = None
     st.session_state.show_all_correct_options = False
     st.session_state.auto_play_audio_html = None
+    st.session_state.manual_audio_html = None
     
-    # --- ★★★★★ 핵심 수정 사항 1: 오디오 위젯의 키를 변경하여 초기화 ★★★★★ ---
-    # 새로운 고유 키를 생성하여 audio_input 위젯이 리셋되도록 함
+    # 오디오 위젯의 키를 변경하여 이전 녹음 기록을 초기화
     st.session_state.audio_key = str(uuid.uuid4())
 
 
@@ -66,14 +66,17 @@ if 'show_all_correct_options' not in st.session_state:
     st.session_state.show_all_correct_options = False
 if 'auto_play_audio_html' not in st.session_state:
     st.session_state.auto_play_audio_html = None
+if 'manual_audio_html' not in st.session_state: 
+    st.session_state.manual_audio_html = None
 if 'audio_key' not in st.session_state:
-    st.session_state.audio_key = 'initial_key' # 초기 키 설정
+    st.session_state.audio_key = 'initial_key'
 
-    # CSS를 주입하여 UI를 더 컴팩트하게 만듭니다.
+# --- 2. UI 렌더링 ---
+# --- ★★★★★ 핵심 수정 사항: 빠졌던 CSS 코드 복원 ★★★★★ ---
 st.markdown("""
     <style>
         /* Streamlit 앱의 메인 콘텐츠 컨테이너 패딩 및 최대 너비 조절 */
-        .stMainBlockContainer {
+        .main .block-container {
             width: 100%;
             padding-top: 1rem;
             padding-bottom: 5rem;
@@ -103,10 +106,6 @@ st.markdown("""
             margin-top: 0.5rem !important;
             margin-bottom: 0.5rem !important;
         }
-        /* 모든 Streamlit 위젯 컨테이너의 상하 여백 줄이기 */
-        .stBlock {
-            margin-bottom: 10px !important; /* 기본 위젯 블록 간 간격 */
-        }
         /* st.info, st.success, st.warning 등 알림 위젯의 간격 조정 */
         .stAlert {
             padding-top: 5px;
@@ -114,42 +113,16 @@ st.markdown("""
             margin-top: 5px !important;
             margin-bottom: 5px !important;
         }
-        /* st.container 안의 여백을 줄임 */
-        .stContainer {
-            padding-top: 10px !important;
-            padding-bottom: 10px !important;
-            margin-bottom: 5px !important;
-        }
-
-        .stMarkdown div[data-testid^="stMarkdownContainer"] div {
-            margin-bottom: 10px !important; /* 충분히 넓은 간격 (조절 가능) */
-        }
-            
-        h5 {
-            margin-top: 5px !important;    /* h5 위쪽 여백 */
-            margin-bottom: 5px !important; /* h5 아래쪽 여백을 5px로 줄임 */
-            padding-top: 0px !important;   /* h5 내부 상단 패딩 제거 */
-            padding-bottom: 0px !important; /* h5 내부 하단 패딩 제거 */
-            padding-left: 0px !important;  /* h5 내부 좌측 패딩 제거 */
-            padding-right: 0px !important; /* h5 내부 우측 패딩 제거 */
-        }
-
-        /* (나머지 기존 CSS 코드들...) */
-        /* 이전에 h1-h6를 한꺼번에 묶어뒀던 부분도 h5에 대한 설정이 더 구체적이면 오버라이드될 것임 */
-        /* .stMarkdown h1, .stMarkdown h2, .stMarkdown h3,
-        .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
+        /* 모든 h1-h6 태그의 마진 및 패딩 조정 */
+        h1, h2, h3, h4, h5, h6 {
             margin-top: 10px !important;
             margin-bottom: 5px !important;
-            padding-top: 0px !important;
-            padding-bottom: 0px !important;
-            padding-left: 0px !important;
-            padding-right: 0px !important;
-        } */
-
+            padding: 0 !important;
+        }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. UI 렌더링 ---
+
 st.header("Learn-Speaking 🗣️")
 st.write("레벨을 선택하고, 한국어 문장을 듣고 영어로 말하는 연습을 해보세요.")
 st.divider()
@@ -183,14 +156,16 @@ elif st.session_state.sentences:
     with st.container(border=True):
         st.markdown(f"#### 🇰🇷 {korean_sentence}")
     
-    if st.session_state.auto_play_audio_html:
-        components.html(st.session_state.auto_play_audio_html, height=0, scrolling=False)
+    # 오디오 재생 로직 통합
+    audio_to_play = st.session_state.auto_play_audio_html or st.session_state.manual_audio_html
+    if audio_to_play:
+        components.html(audio_to_play, height=0, scrolling=False)
         st.session_state.auto_play_audio_html = None
+        st.session_state.manual_audio_html = None
 
     if st.button("🎧 다시 듣기", use_container_width=True):
-        audio_html = autoplay_audio(korean_sentence)
-        if audio_html:
-            components.html(audio_html, height=0)
+        st.session_state.manual_audio_html = autoplay_audio(korean_sentence)
+        st.rerun()
 
     st.divider()
     
@@ -198,32 +173,27 @@ elif st.session_state.sentences:
     
     audio_uploader = st.audio_input(
         "여기에 녹음하세요:", 
-        key=st.session_state.audio_key # 세션 상태에 저장된 키를 사용
+        key=st.session_state.audio_key
     )
 
-    # 오디오 데이터가 업로드되면 (녹음이 끝나면)
     if audio_uploader:
-        # 이전에 분석한 결과가 있다면, 다시 분석하지 않도록 함
-        if st.session_state.user_answer == "":
-            st.info("음성 분석 중...")
-            
-            # --- ★★★★★ 핵심 수정 사항 ★★★★★ ---
-            # UploadedFile 객체에서 .getvalue()를 호출하여 실제 오디오 바이트 데이터를 추출합니다.
-            audio_bytes_data = audio_uploader.getvalue()
-            
-            # STT 처리 함수 호출
-            recognized_text = process_audio_for_stt(audio_bytes_data)
+        st.info("음성 분석 중...")
+        
+        audio_bytes_data = audio_uploader.getvalue()
+        
+        recognized_text = process_audio_for_stt(audio_bytes_data)
 
-            if recognized_text and "Error" not in recognized_text:
-                st.session_state.user_answer = recognized_text
-                st.session_state.check_result = compare_answers(recognized_text, correct_answers)
-            else:
-                st.warning("음성을 인식하지 못했거나 처리 중 오류가 발생했습니다.")
-                st.session_state.user_answer = "" 
-                st.session_state.check_result = None
-            
-            # 결과 처리가 끝나면 새로고침하여 결과를 표시
-            st.rerun()
+        if recognized_text and "Error" not in recognized_text:
+            st.session_state.user_answer = recognized_text
+            st.session_state.check_result = compare_answers(recognized_text, correct_answers)
+        else:
+            st.warning("음성을 인식하지 못했거나 처리 중 오류가 발생했습니다.")
+            st.session_state.user_answer = "" 
+            st.session_state.check_result = None
+        
+        # 분석 후 다음 입력을 위해 키를 변경하여 위젯을 초기화하고, rerun
+        st.session_state.audio_key = str(uuid.uuid4())
+        st.rerun() 
 
     # --- 사용자 답변 및 피드백 표시 ---
     if st.session_state.user_answer:
