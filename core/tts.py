@@ -5,6 +5,7 @@ from gtts import gTTS
 import base64
 from io import BytesIO
 
+@st.cache_data(ttl=86400)
 def autoplay_audio(text: str):
     """
     주어진 텍스트에 대해 자동 재생되는 오디오 HTML을 생성합니다.
