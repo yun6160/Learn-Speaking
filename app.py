@@ -126,40 +126,62 @@ st.markdown("""
             border-radius: 0.5rem;
             margin-bottom: 12px;
         }
-        .sentence-container h4 {
-             margin: 0; /* 내부 h4 태그의 기본 마진 제거하여 정렬 개선 */
+        .sentence-container h5 { /* h4 대신 h5로 변경된 것 같아서 수정 */
+             margin: 0; /* 내부 h5 태그의 기본 마진 제거하여 정렬 개선 */
         }
             
         [data-testid="stVerticalBlock"] {
             gap: 0.5rem;
         }
-            
+        
+        .stMarkdown h5 {
+            padding: 0.375rem 0px 0.5rem;
+        }
+
         .info-list-container {
             background-color: #e6f7ff; /* st.info와 유사한 연한 파란색 배경 */
             border-left: 5px solid #00bfff; /* 왼쪽 테두리 강조 (st.info 느낌) */
-            padding: 10px 0px; /* 내부 여백 */
+            padding: 10px 15px !important; /* 내부 여백 (좌우 패딩 15px로 복원) */
             border-radius: 5px; /* 살짝 둥근 모서리 */
-            margin-top: 10px; /* 위쪽 여백 */
-            margin-bottom: 20px; /* 아래쪽 여백 */
+            margin-top: 10px !important; /* 위쪽 여백 */
+            margin-bottom: 20px !important; /* 아래쪽 여백 */
             color: #333; /* 텍스트 색상 (선택 사항) */
             font-size: 18px; /* 폰트 크기 (선택 사항) */
         }
 
         .info-list-container ul { /* ul 태그 자체의 기본 스타일 제거 */
-            list-style: none; /* 목록 마커 제거 */
-            margin: 0;       /* 외부 여백 제거 */
-            padding: 0;      /* 내부 여백 제거 */
+            list-style: none !important; /* 목록 마커 제거 */
+            margin: 0 !important;       /* 외부 여백 제거 */
+            padding: 0 !important;      /* 내부 여백 제거 */
         }
 
         .info-list-container li { /* li 항목별 스타일 */
-            padding-left: 0; /* 필요하다면 들여쓰기를 조절 (여기서는 없앰) */
+            padding-left: 0 !important; /* 필요하다면 들여쓰기를 조절 (여기서는 없앰) */
+            margin-left: 0 !important; /* 혹시 모를 왼쪽 마진도 0 */
             margin-bottom: 5px; /* 각 리스트 아이템 아래 여백 */
         }
 
         /* 마지막 li 항목에는 margin-bottom 제거 (깔끔하게) */
         .info-list-container li:last-child {
             margin-bottom: 0;
+            font-weight: bold;
         }
+        
+        /* get_highlighted_diff_html에서 반환하는 하이라이트 텍스트를 감싸는 div 스타일 */
+        .highlighted-diff {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 5px !important;   /* 위쪽 마진 더 줄임 */
+            margin-bottom: 15px !important; /* 아래쪽 마진도 줄임 */
+        }
+        .highlight-green {
+            color: green;
+        }
+        .highlight-red {
+            color: red;
+            text-decoration: underline;
+        }
+
 
     </style>
     """, unsafe_allow_html=True)
@@ -253,15 +275,20 @@ elif st.session_state.sentences:
             similarity, best_match = st.session_state.check_result
             similarity_percentage = similarity * 100
             st.markdown(f"> **유사도: {similarity_percentage:.1f}%**")
-            if similarity_percentage >= 90: st.success("🎉 거의 완벽해요!")
-            elif similarity_percentage >= 80:
-                st.info("👍 아쉽네요! 그래도 계속 도전해보세요.")
+
+            if similarity_percentage >= 90:
+                st.success("🎉 거의 완벽해요!")
+            else: # 90% 미만일 경우에만 Corrected Answer 또는 Warning 표시
+                if similarity_percentage >= 80:
+                    st.info("👍 아쉽네요! 그래도 계속 도전해보세요.")
+                else:
+                    st.warning("🤔 조금 아쉬워요. 다시 한번 도전해보세요!")
+                
                 st.markdown("##### ✏️ Corrected Answer")
                 highlighted_answer = get_highlighted_diff_html(st.session_state.user_answer, best_match)
-                st.markdown(f"<div>{highlighted_answer}</div>", unsafe_allow_html=True)
-            else:
-                st.warning("🤔 조금 아쉬워요. 다시 한번 도전해보세요!")
+                st.markdown(f"<div class='highlighted-diff'>{highlighted_answer}</div>", unsafe_allow_html=True)
 
+    # '모든 답안 보기/숨기기' 버튼은 사용자 답변 평가 후에 위치
     button_text = "🙈 답안 숨기기" if st.session_state.show_all_correct_options else "📝 모든 답안 보기"
     if st.button(button_text, key="toggle_all_answers", use_container_width=True):
         st.session_state.show_all_correct_options = not st.session_state.show_all_correct_options
