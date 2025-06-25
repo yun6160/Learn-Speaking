@@ -1,7 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import random
-from io import BytesIO
 import uuid # 위젯 키를 위한 고유 ID 생성
 
 # --- core 폴더의 함수들 임포트 ---
@@ -14,7 +13,7 @@ from core.checker import compare_answers, get_highlighted_diff_html
 
 st.set_page_config(
     page_title="Learn-Speaking",
-    page_icon="./.streamlit/static/192x192.png",
+    page_icon="./.streamlit/static/512x512.png",
     layout="centered"
 )
 
@@ -31,10 +30,10 @@ def reset_state_for_new_sentence():
 
 
 def set_new_random_sentence():
-    """현재 선택된 레벨에서 랜덤한 새 문장을 설정하는 함수"""
-    level = st.session_state.selected_level
+    """현재 선택된 카테고리에서 랜덤한 새 문장을 설정하는 함수"""
+    category = st.session_state.selected_category
     sentences = st.session_state.sentences
-    possible_indices = [i for i, s in enumerate(sentences) if s.get('level') == level]
+    possible_indices = [i for i, s in enumerate(sentences) if s.get('category') == category]
     if not possible_indices:
         st.session_state.current_index = -1; return
     
@@ -55,27 +54,26 @@ def set_new_random_sentence():
 # --- 세션 상태 변수들 초기화 ---
 if 'sentences' not in st.session_state:
     st.session_state.sentences = load_data_from_private_github()
-if 'selected_level' not in st.session_state:
-    # ★★★★★ 이 부분을 수정! 가장 첫 번째 레벨 문자열로 초기화 ★★★★★
+if 'selected_category' not in st.session_state:
     # load_data_from_private_github()가 빈 리스트를 반환할 경우를 대비하여 조건부로 설정
     if st.session_state.sentences and len(st.session_state.sentences) > 0:
-        # JSON 데이터에서 사용 가능한 모든 레벨 중 첫 번째 레벨을 기본값으로 설정
-        all_levels_in_data = sorted(list(set(s['level'] for s in st.session_state.sentences if 'level' in s)))
-        if all_levels_in_data:
-            st.session_state.selected_level = all_levels_in_data[0]
-        else: # 데이터는 있지만 레벨 키가 없는 경우
-            st.session_state.selected_level = None # 또는 기본 레벨 "기초 회화 & 미드"
-            st.warning("경고: sentences.json에 'level' 키가 있는 문장이 없습니다. 기본 레벨을 설정할 수 없습니다.")
+        # JSON 데이터에서 사용 가능한 모든 카테고리 중 첫 번째 카테고리을 기본값으로 설정
+        all_categorys_in_data = sorted(list(set(s['category'] for s in st.session_state.sentences if 'category' in s)))
+        if all_categorys_in_data:
+            st.session_state.selected_category = all_categorys_in_data[0]
+        else: # 데이터는 있지만 카테고리 키가 없는 경우
+            st.session_state.selected_category = None # 또는 기본 카테고리 "기초 회화 & 미드"
+            st.warning("경고: sentences.json에 'category' 키가 있는 문장이 없습니다. 기본 카테고리을 설정할 수 없습니다.")
     else:
-        st.session_state.selected_level = None # 문장 데이터 자체가 없는 경우
+        st.session_state.selected_category = None # 문장 데이터 자체가 없는 경우
         st.warning("경고: sentences.json 파일에서 문장 데이터를 로드하지 못했습니다.")
         
 if 'current_index' not in st.session_state:
-    # selected_level이 설정된 후에 set_new_random_sentence 호출
-    if st.session_state.selected_level is not None:
+    # selected_category이 설정된 후에 set_new_random_sentence 호출
+    if st.session_state.selected_category is not None:
         set_new_random_sentence()
     else:
-        st.session_state.current_index = -1 # 레벨이 없으면 -1로 초기화
+        st.session_state.current_index = -1 # 카테고리이 없으면 -1로 초기화
 if 'user_answer' not in st.session_state:
     st.session_state.user_answer = ""
 if 'check_result' not in st.session_state:
@@ -106,26 +104,23 @@ st.header("Learn-Speaking 🗣️")
 st.write("한국어 문장을 듣고 영어로 말하는 연습을 해보세요.")
 st.divider()
 
-# 레벨 선택 UI
-st.write("##### **레벨 선택**")
-
-
-levels = sorted(list(set(s['level'] for s in st.session_state.sentences if 'level' in s)))
-if not levels:
+# 카테고리 선택 UI
+categorys = sorted(list(set(s['category'] for s in st.session_state.sentences if 'category' in s)))
+if not categorys:
     st.warning("연습할 문장이 없습니다. sentences.json 파일을 확인해주세요.")
 else:
-    cols = st.columns(len(levels))
-    for i, level in enumerate(levels):
-        if cols[i].button(f"{level}", use_container_width=True, type=("primary" if st.session_state.selected_level == level else "secondary")):
-            if st.session_state.selected_level != level:
-                st.session_state.selected_level = level
+    cols = st.columns(len(categorys))
+    for i, category in enumerate(categorys):
+        if cols[i].button(f"{category}", use_container_width=True, type=("primary" if st.session_state.selected_category == category else "secondary")):
+            if st.session_state.selected_category != category:
+                st.session_state.selected_category = category
                 set_new_random_sentence()
                 st.rerun() 
 
 st.divider()
 
 if st.session_state.current_index == -1:
-    st.warning(f"레벨 {st.session_state.selected_level}에 해당하는 문장이 없습니다.")
+    st.warning(f"카테고리 {st.session_state.selected_category}에 해당하는 문장이 없습니다.")
 elif st.session_state.sentences:
     current_sentence_data = st.session_state.sentences[st.session_state.current_index]
     sentence_id = current_sentence_data["id"]
@@ -134,7 +129,7 @@ elif st.session_state.sentences:
 
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown(f"**문장 ID: {sentence_id}** (레벨 {st.session_state.selected_level})")
+        st.markdown(f"**문장 ID: {sentence_id}** ({st.session_state.selected_category})")
     with col2:
         # 오른쪽 컬럼 안에 또 컬럼을 만들어 버튼을 오른쪽으로 밀어내는 트릭
         spacer, button_col = st.columns([2, 1]) # [여백, 버튼] 비율
