@@ -14,7 +14,14 @@ from core.checker import compare_answers, get_highlighted_diff_html
 
 st.set_page_config(
     page_title="Learn-Speaking",
+    page_icon="./.streamlit/static/192x192.png",
     layout="centered"
+)
+
+# --- PWA 설정을 위한 매니페스트 링크 주입 ---
+st.markdown(
+    '<link rel="manifest" href="/static/manifest.json">',
+    unsafe_allow_html=True,
 )
 
 def reset_state_for_new_sentence():
@@ -78,7 +85,7 @@ st.markdown("""
         /* Streamlit 앱의 메인 콘텐츠 컨테이너 패딩 및 최대 너비 조절 */
         .stMainBlockContainer {
             width: 100%;
-            padding-top: 1rem;
+            padding-top: 3rem;
             padding-bottom: 5rem;
             padding-left: 1rem;
             padding-right: 1rem;
@@ -92,23 +99,14 @@ st.markdown("""
         }
         /* 모든 버튼 위젯의 상하 여백을 줄입니다. */
         .stButton>button {
-            margin-top: 3px;
-            margin-bottom: 3px;
+            margin-top: 1px;
+            margin-bottom: 1px;
         }
-        /* 정답 리스트의 여백을 조절합니다 */
-        ul {
-            padding-left: 20px;
-            margin-top: 5px;
-            margin-bottom: 5px;
-        }
+        
         /* st.write, st.markdown 등의 기본 p 태그 여백 줄이기 */
         .stMarkdown p {
             margin-top: 0.5rem !important;
             margin-bottom: 0.5rem !important;
-        }
-        /* 모든 Streamlit 위젯 컨테이너의 상하 여백 줄이기 */
-        .stBlock {
-            margin-bottom: 10px !important; /* 기본 위젯 블록 간 간격 */
         }
         /* st.info, st.success, st.warning 등 알림 위젯의 간격 조정 */
         .stAlert {
@@ -117,44 +115,58 @@ st.markdown("""
             margin-top: 5px !important;
             margin-bottom: 5px !important;
         }
-        /* st.container 안의 여백을 줄임 */
-        .stContainer {
-            padding-top: 10px !important;
-            padding-bottom: 10px !important;
-            margin-bottom: 5px !important;
+            
+        .sentence-container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 80px;  /* 컨테이너의 최소 높이 지정 */
+            padding: 1rem;
+            border: 1px solid rgba(49, 51, 63, 0.2);
+            border-radius: 0.5rem;
+            margin-bottom: 12px;
         }
-
-        .stMarkdown div[data-testid^="stMarkdownContainer"] div {
-            margin-bottom: 10px !important; /* 충분히 넓은 간격 (조절 가능) */
+        .sentence-container h4 {
+             margin: 0; /* 내부 h4 태그의 기본 마진 제거하여 정렬 개선 */
         }
             
-        h5 {
-            margin-top: 5px !important;    /* h5 위쪽 여백 */
-            margin-bottom: 5px !important; /* h5 아래쪽 여백을 5px로 줄임 */
-            padding-top: 0px !important;   /* h5 내부 상단 패딩 제거 */
-            padding-bottom: 0px !important; /* h5 내부 하단 패딩 제거 */
-            padding-left: 0px !important;  /* h5 내부 좌측 패딩 제거 */
-            padding-right: 0px !important; /* h5 내부 우측 패딩 제거 */
+        [data-testid="stVerticalBlock"] {
+            gap: 0.5rem;
+        }
+            
+        .info-list-container {
+            background-color: #e6f7ff; /* st.info와 유사한 연한 파란색 배경 */
+            border-left: 5px solid #00bfff; /* 왼쪽 테두리 강조 (st.info 느낌) */
+            padding: 10px 0px; /* 내부 여백 */
+            border-radius: 5px; /* 살짝 둥근 모서리 */
+            margin-top: 10px; /* 위쪽 여백 */
+            margin-bottom: 20px; /* 아래쪽 여백 */
+            color: #333; /* 텍스트 색상 (선택 사항) */
+            font-size: 18px; /* 폰트 크기 (선택 사항) */
         }
 
-        /* (나머지 기존 CSS 코드들...) */
-        /* 이전에 h1-h6를 한꺼번에 묶어뒀던 부분도 h5에 대한 설정이 더 구체적이면 오버라이드될 것임 */
-        /* .stMarkdown h1, .stMarkdown h2, .stMarkdown h3,
-        .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
-            margin-top: 10px !important;
-            margin-bottom: 5px !important;
-            padding-top: 0px !important;
-            padding-bottom: 0px !important;
-            padding-left: 0px !important;
-            padding-right: 0px !important;
-        } */
+        .info-list-container ul { /* ul 태그 자체의 기본 스타일 제거 */
+            list-style: none; /* 목록 마커 제거 */
+            margin: 0;       /* 외부 여백 제거 */
+            padding: 0;      /* 내부 여백 제거 */
+        }
+
+        .info-list-container li { /* li 항목별 스타일 */
+            padding-left: 0; /* 필요하다면 들여쓰기를 조절 (여기서는 없앰) */
+            margin-bottom: 5px; /* 각 리스트 아이템 아래 여백 */
+        }
+
+        /* 마지막 li 항목에는 margin-bottom 제거 (깔끔하게) */
+        .info-list-container li:last-child {
+            margin-bottom: 0;
+        }
 
     </style>
     """, unsafe_allow_html=True)
 
 
 st.header("Learn-Speaking 🗣️")
-st.write("레벨을 선택하고, 한국어 문장을 듣고 영어로 말하는 연습을 해보세요.")
+st.write("한국어 문장을 듣고 영어로 말하는 연습을 해보세요.")
 st.divider()
 
 # 레벨 선택 UI
@@ -181,28 +193,36 @@ elif st.session_state.sentences:
     korean_sentence = current_sentence_data["korean"]
     correct_answers = current_sentence_data["english"]
 
-    st.markdown(f"**문장 ID: {sentence_id}** (레벨 {st.session_state.selected_level})")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown(f"**문장 ID: {sentence_id}** (레벨 {st.session_state.selected_level})")
+    with col2:
+        # 오른쪽 컬럼 안에 또 컬럼을 만들어 버튼을 오른쪽으로 밀어내는 트릭
+        spacer, button_col = st.columns([2, 1]) # [여백, 버튼] 비율
+        with button_col:
+            if st.button("🔄 다른 문장"):
+                set_new_random_sentence()
+                st.rerun()
 
-    with st.container(border=True):
-        st.markdown(f"#### 🇰🇷 {korean_sentence}")
+    st.markdown(
+        f'<div class="sentence-container"><h5>🇰🇷 {korean_sentence}</h5></div>',
+        unsafe_allow_html=True
+    )
     
-    # 오디오 재생 로직 통합
     audio_to_play = st.session_state.auto_play_audio_html or st.session_state.manual_audio_html
     if audio_to_play:
         components.html(audio_to_play, height=0, scrolling=False)
         st.session_state.auto_play_audio_html = None
         st.session_state.manual_audio_html = None
 
-    if st.button("🎧 다시 듣기", use_container_width=True):
+    if st.button("🔂 다시 듣기", use_container_width=True):
         st.session_state.manual_audio_html = autoplay_audio(korean_sentence)
         st.rerun()
 
-    st.divider()
-    
-    st.markdown("##### 🎤 말하기 (마이크 아이콘을 누르고 말한 뒤, 정지 버튼을 누르세요)")
+    st.markdown("##### 🎤 말하기")
     
     audio_uploader = st.audio_input(
-        "여기에 녹음하세요:", 
+        "마이크 아이콘을 누르고 말한 뒤, 정지 버튼을 누르세요:", 
         key=st.session_state.audio_key
     )
 
@@ -221,11 +241,9 @@ elif st.session_state.sentences:
             st.session_state.user_answer = "" 
             st.session_state.check_result = None
         
-        # 분석 후 다음 입력을 위해 키를 변경하여 위젯을 초기화하고, rerun
         st.session_state.audio_key = str(uuid.uuid4())
         st.rerun() 
 
-    # --- 사용자 답변 및 피드백 표시 ---
     if st.session_state.user_answer:
         st.markdown("---")
         st.markdown("##### 💬 Your Answer")
@@ -244,21 +262,15 @@ elif st.session_state.sentences:
             else:
                 st.warning("🤔 조금 아쉬워요. 다시 한번 도전해보세요!")
 
-    # --- '모든 답안 보기' 및 '다른 문장' 버튼 ---
     button_text = "🙈 답안 숨기기" if st.session_state.show_all_correct_options else "📝 모든 답안 보기"
     if st.button(button_text, key="toggle_all_answers", use_container_width=True):
         st.session_state.show_all_correct_options = not st.session_state.show_all_correct_options
         st.rerun()
 
     if st.session_state.show_all_correct_options:
-        st.markdown("##### 📝 All Correct Answer(s) ")
-        answer_html = "".join([f"<li>{ans}</li>" for ans in correct_answers])
-        st.markdown(f"<ul>{answer_html}</ul>", unsafe_allow_html=True)
+        st.markdown("##### 📝 Correct Answer(s) ")
+        answer_html = "".join([f"<li>🇬🇧 {ans}</li>" for ans in correct_answers])
+        st.markdown(f"<div class='info-list-container'><ul>{answer_html}</ul></div>", unsafe_allow_html=True)
 
-    st.divider()
-
-    if st.button("🔄 다른 랜덤 문장", use_container_width=True):
-        set_new_random_sentence()
-        st.rerun()
 else:
     st.warning("연습할 문장이 없습니다. 'sentences.json' 파일을 확인해주세요.")
