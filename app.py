@@ -278,15 +278,15 @@ elif st.session_state.sentences:
 
             if similarity_percentage >= 90:
                 st.success("🎉 거의 완벽해요!")
-            else: # 90% 미만일 경우에만 Corrected Answer 또는 Warning 표시
-                if similarity_percentage >= 80:
-                    st.info("👍 아쉽네요! 그래도 계속 도전해보세요.")
-                else:
-                    st.warning("🤔 조금 아쉬워요. 다시 한번 도전해보세요!")
-                
+                # 이 아래에 Corrected Answer를 추가
+                st.markdown("##### ✏️ Corrected Answer")
+            elif similarity_percentage >= 70: # 70% 이상 90% 미만일 때
+                st.info("👍 아쉽네요! 그래도 계속 도전해보세요.")
                 st.markdown("##### ✏️ Corrected Answer")
                 highlighted_answer = get_highlighted_diff_html(st.session_state.user_answer, best_match)
                 st.markdown(f"<div class='highlighted-diff'>{highlighted_answer}</div>", unsafe_allow_html=True)
+            else: # 70% 미만일 때
+                st.warning("🤔 조금 아쉬워요. 다시 한번 도전해보세요!")
 
     # '모든 답안 보기/숨기기' 버튼은 사용자 답변 평가 후에 위치
     button_text = "🙈 답안 숨기기" if st.session_state.show_all_correct_options else "📝 모든 답안 보기"
