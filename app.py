@@ -5,7 +5,7 @@ from io import BytesIO
 import uuid # 위젯 키를 위한 고유 ID 생성
 
 # --- core 폴더의 함수들 임포트 ---
-from core.data_loader import load_data_from_jsonbin
+from core.data_loader import load_data_from_private_github
 from core.tts import autoplay_audio
 from core.stt import process_audio_for_stt
 from core.checker import compare_answers, get_highlighted_diff_html
@@ -16,12 +16,6 @@ st.set_page_config(
     page_title="Learn-Speaking",
     page_icon="./.streamlit/static/192x192.png",
     layout="centered"
-)
-
-# --- PWA 설정을 위한 매니페스트 링크 주입 ---
-st.markdown(
-    '<link rel="manifest" href="/static/manifest.json">',
-    unsafe_allow_html=True,
 )
 
 def reset_state_for_new_sentence():
@@ -60,7 +54,7 @@ def set_new_random_sentence():
 
 # --- 세션 상태 변수들 초기화 ---
 if 'sentences' not in st.session_state:
-    st.session_state.sentences = load_data_from_jsonbin()
+    st.session_state.sentences = load_data_from_private_github()
 if 'selected_level' not in st.session_state:
     st.session_state.selected_level = 1
 if 'current_index' not in st.session_state:

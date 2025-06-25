@@ -1,21 +1,23 @@
-import streamlit as st
+# core/data_loader.py
 import requests
+import streamlit as st
 
-@st.cache_data
-def load_data_from_jsonbin():
-    """JSONBin.io에서 데이터를 로드합니다."""
+@st.cache_data(ttl=3600) 
+def load_data_from_private_github():
+    github_token = st.secrets["github"]["token"]
+
+    # 이 URL을 사용하면 돼!
+    raw_url = "https://raw.githubusercontent.com/yun6160/Learn-Speaking-Json/refs/heads/main/sentences.json" 
+
+    headers = {
+        "Authorization": f"token {github_token}",
+        "Accept": "application/vnd.github.v3.raw"
+    }
+
     try:
-        bin_id = st.secrets["JSONBIN_ID"]
-        api_key = st.secrets["JSONBIN_API_KEY"]
-        headers = {'X-Master-Key': api_key, 'X-Bin-Meta': 'false'}
-        url = f'https://api.jsonbin.io/v3/b/{bin_id}/latest'
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status() # HTTP 에러가 있을 경우 예외 발생
+        response = requests.get(raw_url, headers=headers)
+        response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        st.error(f"데이터를 불러오는 데 실패했습니다: {e}")
-    except KeyError:
-        st.error("Streamlit Secrets에 JSONBIN_ID 또는 JSONBIN_API_KEY가 설정되지 않았습니다.")
-    except Exception as e:
-        st.error(f"알 수 없는 오류 발생: {e}")
-    return []
+        st.error(f"비공개 GitHub에서 데이터를 로드하는 중 오류가 발생했습니다: {e}")
+        st.stop()
