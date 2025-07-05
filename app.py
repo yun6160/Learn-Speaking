@@ -4,7 +4,7 @@ import random
 import uuid # 위젯 키를 위한 고유 ID 생성
 
 # --- core 폴더의 함수들 임포트 ---
-from core.data_loader import load_data_from_private_github
+from core.data_loader import load_data_from_github
 from core.tts import autoplay_audio
 from core.stt import process_audio_for_stt
 from core.checker import compare_answers, get_highlighted_diff_html
@@ -53,7 +53,7 @@ def set_new_random_sentence():
 
 # --- 세션 상태 변수들 초기화 ---
 if 'sentences' not in st.session_state:
-    st.session_state.sentences = load_data_from_private_github()
+    st.session_state.sentences = load_data_from_github()
 if 'selected_category' not in st.session_state:
     # load_data_from_private_github()가 빈 리스트를 반환할 경우를 대비하여 조건부로 설정
     if st.session_state.sentences and len(st.session_state.sentences) > 0:

@@ -67,6 +67,3 @@ def load_data_from_github():
     except Exception as e:
         st.error(f"데이터 처리 중 예기치 않은 오류가 발생했습니다: {e}")
         st.stop()
-
-def load_data_from_jsonbin():
-    return load_data_from_github()
