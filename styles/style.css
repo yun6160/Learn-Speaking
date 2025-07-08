@@ -10,8 +10,8 @@
 
 /* 구분선(st.divider)의 상하 여백을 줄입니다. */
 hr {
-    margin-top: 5px !important;
-    margin-bottom: 5px !important;
+    margin-top: 10px !important;
+    margin-bottom: 25px !important;
 }
 /* 모든 버튼 위젯의 상하 여백을 줄입니다. */
 .stButton > button {
